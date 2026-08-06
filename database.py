@@ -1,9 +1,10 @@
 # database.py
+import streamlit as st
 import mysql.connector
 import pandas as pd
-from config import DB_PASSWORD
 
-password = DB_PASSWORD
+
+password = st.secrets["DB_PASSWORD"]
 class DB:
     def __init__(self):
         # connect to the database
