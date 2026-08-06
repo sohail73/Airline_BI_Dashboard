@@ -2,7 +2,6 @@
 import streamlit as st
 import mysql.connector
 import pandas as pd
-from config import DB_PASSWORD
 
 try:
     DB_PASSWORD = st.secrets["DB_PASSWORD"]
