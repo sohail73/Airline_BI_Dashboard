@@ -2,9 +2,13 @@
 import streamlit as st
 import mysql.connector
 import pandas as pd
+from config import DB_PASSWORD
 
+try:
+    DB_PASSWORD = st.secrets["DB_PASSWORD"]
+except Exception:
+    from config import DB_PASSWORD
 
-password = st.secrets["DB_PASSWORD"]
 class DB:
     def __init__(self):
         # connect to the database
@@ -12,7 +16,7 @@ class DB:
             self.conn = mysql.connector.connect(
                 host="127.0.0.1",
                 user="root",
-                password=password,
+                password=DB_PASSWORD,
                 database="flights"
             )
             self.mycursor = self.conn.cursor()
