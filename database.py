@@ -1,32 +1,17 @@
 # database.py
-import streamlit as st
-import mysql.connector
+import sqlite3
 import pandas as pd
 
-try:
-    DB_PASSWORD = st.secrets["DB_PASSWORD"]
-except Exception:
-    from config import DB_PASSWORD
 
 class DB:
     def __init__(self):
-        # connect to the database
-        try:
-            self.conn = mysql.connector.connect(
-                host="127.0.0.1",
-                user="root",
-                password=DB_PASSWORD,
-                database="flights"
-            )
-            self.mycursor = self.conn.cursor()
-            print('connection established')
-        except mysql.connector.Error as err:
-            print("Connection failed")
-            print(err)
+        # Database file ka naam (ye file convert_db script se banegi)
+        self.db_path = "flights.db"
+        print('SQLite connection initialized')
 
     def fetch_city_names(self):
-        if not self.conn.is_connected():
-            return []
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
 
         query = """
             SELECT DISTINCT(destination_city) AS City FROM ticket_prices
@@ -34,57 +19,54 @@ class DB:
             SELECT DISTINCT(source_city) AS City FROM ticket_prices
             ORDER BY City
         """
-        self.mycursor.execute(query)
-        data = self.mycursor.fetchall()
+        cursor.execute(query)
+        data = cursor.fetchall()
+        conn.close()
+
         return [item[0] for item in data]
 
     def fetch_filtered_flights(self, source='All', destination='All', travel_class='All'):
-        if not self.conn.is_connected():
-            return pd.DataFrame()
+        conn = sqlite3.connect(self.db_path)
 
         query = "SELECT airline, flight, source_city, departure_time, stops, arrival_time, destination_city, class, duration, days_left, price FROM ticket_prices WHERE 1=1"
         params = []
 
         if source != 'All':
-            query += " AND source_city = %s"
+            query += " AND source_city = ?"
             params.append(source)
         if destination != 'All':
-            query += " AND destination_city = %s"
+            query += " AND destination_city = ?"
             params.append(destination)
         if travel_class != 'All':
-            query += " AND class = %s"
+            query += " AND class = ?"
             params.append(travel_class)
 
-        self.mycursor.execute(query, tuple(params))
-        data = self.mycursor.fetchall()
+        # Pandas directly SQLite se data DataFrame me convert kar deta hai
+        df = pd.read_sql_query(query, conn, params=params)
+        conn.close()
 
-        cols = ['airline', 'flight', 'source_city', 'departure_time', 'stops', 'arrival_time', 'destination_city',
-                'class', 'duration', 'days_left', 'price']
-        return pd.DataFrame(data, columns=cols)
+        return df
 
     def fetch_airline_frequency(self):
-        if not self.conn.is_connected():
-            return pd.DataFrame()
-
+        conn = sqlite3.connect(self.db_path)
         query = "SELECT airline, COUNT(*) as Count FROM ticket_prices GROUP BY airline ORDER BY Count DESC"
-        self.mycursor.execute(query)
-        data = self.mycursor.fetchall()
-        return pd.DataFrame(data, columns=['airline', 'Count'])
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+
+        return df
 
     def fetch_price_vs_days_left(self):
-        if not self.conn.is_connected():
-            return pd.DataFrame()
-
+        conn = sqlite3.connect(self.db_path)
         query = "SELECT days_left, AVG(price) as avg_price FROM ticket_prices GROUP BY days_left ORDER BY days_left DESC"
-        self.mycursor.execute(query)
-        data = self.mycursor.fetchall()
-        return pd.DataFrame(data, columns=['days_left', 'avg_price'])
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+
+        return df
 
     def fetch_stops_pricing(self):
-        if not self.conn.is_connected():
-            return pd.DataFrame()
-
+        conn = sqlite3.connect(self.db_path)
         query = "SELECT stops, AVG(price) as avg_price FROM ticket_prices GROUP BY stops"
-        self.mycursor.execute(query)
-        data = self.mycursor.fetchall()
-        return pd.DataFrame(data, columns=['stops', 'avg_price'])
+        df = pd.read_sql_query(query, conn)
+        conn.close()
+
+        return df
